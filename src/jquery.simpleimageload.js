@@ -180,9 +180,9 @@
 					onComplete      :   _error,
 				});
 				// check via the onLoad event
-				//this.onload = _check;
+				this.onload = _check;
 				// check for an image error
-				//this.onerror = _error;
+				this.onerror = _error;
 			});
 		},
 
