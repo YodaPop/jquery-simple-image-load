@@ -3,7 +3,7 @@
 * @descripton       Determines when an image element has loaded and executes a
 *                   callback function on complete.
 *
-* @version          0.1.0
+* @version          0.1.1
 * @requires         jQuery 1.6+
 * 
 *                   jQuery Simple Timer Plugin
@@ -12,6 +12,7 @@
 *
 * @author           Ben Gullotti
 * @author-email     ben@bengullotti.com
+* @author-site      https://github.com/YodaPop
 *
 * @license          MIT License -
 *                   http://www.opensource.org/licenses/mit-license.php
@@ -22,14 +23,29 @@
 	// private
 
 	/**
+	 * An object containing the public properties used for the plugin's default
+	 * settings.
+	 *
+	 * @property _settings
+	 * @type Object
+	 * @private
+	 **/
+	var _settings = {
+		increment   :   100,
+		duration    :   10000,
+		onLoad      :   false,
+		onError     :   false,
+	},
+
+	/**
 	 * Checks the image.complete property to see if the image had been loaded.
 	 *
 	 * @method _check
 	 * @private
 	 **/
-	var _check = function() {
+	_check = function() {
 		// is the image completely loaded
-		if ( $(this).get(0).complete ) {
+		if ( get.loaded.call($(this)) ) {
 			// call complete
 			_load.apply(this);
 		}
@@ -70,8 +86,61 @@
 		methods.destroy.call($(this));
 	},
 
+	/**
+	 * Getter functions called using
+	 * $(selector).simpleTimer('get' + methodName). WARNING: These methods are
+	 * not chainable.
+	 */
+	get = {
+
+		/**
+		 * Get the private default settings object used to initialize the
+		 * public settings of the timer plugin.
+		 *
+		 * @method get.defaultSettings
+		 * @return {Object} The default settings object
+		 **/
+		defaultSettings : function() {
+			// apply to each element
+			return _settings;
+		},
+
+		/**
+		 * Checks the image.complete property to see if the image has been
+		 * loaded.
+		 *
+		 * @method get.loaded
+		 * @return {Mixed} Returns a single boolean if one element was selected,
+		 * otherwise it returns an array of booleans.
+		 **/
+		loaded : function() {
+			// the array of percentages
+			var arr = [];
+			// loop through the elements
+			this.each(function() {
+				if ( $(this).get(0).complete ) {
+					arr.push(true);
+				}else {
+					arr.push(false);
+				}
+			});
+
+			if ( this.length === 1 ) {
+				// return for one element
+				return arr[0];
+			}else {
+				// return for multiple selected elements
+				return arr;
+			}
+		},
+
+	},
+
 	// public
 
+	/**
+	 * Filters applied before method calls.
+	 */
 	filters = {
 
 		/**
@@ -81,6 +150,7 @@
 		 * @method filters.init
 		 * @param {Object} settings The settings for the plugin
 		 * @return {Object} The jQuery object from which the method was called
+		 * @chainable
 		 **/
 		init : function( options ) {
 			// filter out the uninitialized
@@ -112,13 +182,15 @@
 		 * @method filters.methods
 		 * @param {Object} method The method about to be filtered
 		 * @return {Object} The jQuery object from which the method was called
+		 * @chainable
 		 **/
 		methods : function( method ) {
 			// filter out the uninitialized
 			var filtered = this.filter(function() {
 				if( $(this).data('SimpleImageLoad.settings') === undefined ) {
-					$.error('Simple Image Load Error: method "' + method + '" was ' +
-						'called on an element which has not been initialized.');
+					$.error('Simple Image Load Error: method "' + method +
+						'" was called on an element which has not been ' +
+						'initialized.');
 
 					return false;
 				}
@@ -139,6 +211,10 @@
 
 	},
 
+	/**
+	 * Publicly accessible methods called via
+	 * $("selector").simpleImageLoad("methodName").
+	 */
 	methods = {
 
 		/**
@@ -150,6 +226,7 @@
 		 * options such as the timer's increment, duration, and callbacks (see
 		 * README.md for details)
 		 * @return {Object} The jQuery object's from which the method was called
+		 * @chainable
 		 **/
 		init : function( options ) {
 
@@ -157,16 +234,7 @@
 			* Create some defaults. Extend them with any options that were
 			* provided.
 			*/
-			var settings = $.extend( true, {
-				increment   :   100,
-				duration    :   10000,
-				onLoad      :   false,
-				onError     :   false,
-			}, options,
-			// private settings
-			{
-				loaded      :   false,
-			});
+			var settings = $.extend( true, {}, _settings, options);
 
 			return this.each(function(){
 				// save data
@@ -192,6 +260,7 @@
 		 *
 		 * @method methods.destroy
 		 * @return {Object} The jQuery object's from which the method was called
+		 * @chainable
 		 **/
 		destroy : function() {
 			// apply to each element
