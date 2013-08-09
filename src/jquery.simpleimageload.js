@@ -5,10 +5,7 @@
 *
 * @version          0.1.1
 * @requires         jQuery 1.6+
-* 
-*                   jQuery Simple Timer Plugin
-*                   https://raw.github.com/YodaPop/jquery-simple-timer/master/
-*                   jquery.simpletimer.min.js
+*                   https://github.com/YodaPop/jquery-simple-timer
 *
 * @author           Ben Gullotti
 * @author-email     ben@bengullotti.com
@@ -52,10 +49,8 @@
 	},
 
 	/**
-	 * The load method executed upon completion of the simple timer. Checks to
-	 * see whether the image has completed. The onLoad event fires if the image
-	 * has finished loading, otherwise the onError event fires. The image load
-	 * plugin is automatically destroyed.
+	 * The load method executed upon completion of the simple timer. The onLoad
+	 * event fires. The image load plugin is automatically destroyed.
 	 *
 	 * @method _load
 	 * @private
@@ -88,14 +83,14 @@
 
 	/**
 	 * Getter functions called using
-	 * $(selector).simpleTimer('get' + methodName). WARNING: These methods are
-	 * not chainable.
+	 * $(selector).simpleImageLoad('get' + methodName). WARNING: These methods
+	 * are not chainable.
 	 */
 	get = {
 
 		/**
 		 * Get the private default settings object used to initialize the
-		 * public settings of the timer plugin.
+		 * public settings of the plugin.
 		 *
 		 * @method get.defaultSettings
 		 * @return {Object} The default settings object
@@ -107,7 +102,7 @@
 
 		/**
 		 * Checks the image.complete property to see if the image has been
-		 * loaded.
+		 * loaded on the selected elements.
 		 *
 		 * @method get.loaded
 		 * @return {Mixed} Returns a single boolean if one element was selected,
@@ -117,7 +112,7 @@
 			// the array of percentages
 			var arr = [];
 			// loop through the elements
-			this.each(function() {
+			$(this).each(function() {
 				if ( $(this).get(0).complete ) {
 					arr.push(true);
 				}else {
@@ -269,9 +264,7 @@
 				this.onload = null;
 				this.onerror = null;
 				// destroy the timer
-				if ( $(this).data('SimpleTimer.settings') !== undefined ) {
-					$(this).simpleTimer('destroy');
-				}
+				$(this).simpleTimer('destroy');
 				// remove previously stored data
 				$(this).removeData('SimpleImageLoad.settings');
 			});
@@ -282,15 +275,53 @@
 	// jQuery plugin
 
 	$.fn.simpleImageLoad = function( method ) {
-		//call the methods from the methods variable
-		if ( methods[method] ) {
-			return filters.methods.apply( this, arguments );
+		if ( typeof method === 'string' ) {
+			if ( method.substr(0, 3) === 'get' ) {
+				method = method.substr(3, 1).toLowerCase() +
+					method.substr(4);
+				if ( get[method] ) {
+					// getter functions (not chainable)
+					return get[method].call(this);
+				}else {
+					$.error('Simple Image Load Error: getter function ' +
+						method + ' does not exist.');
+				}
+			} else if ( methods[method] ) {
+				// filtered methods
+				return filters.methods.apply( this, arguments );
+			} else {
+				$.error('Simple Image Load Error: method ' +  method +
+					' does not exist.');
+			}
 		} else if ( typeof method === 'object' || ! method ) {
-			return filters.init.call( this, arguments[0] );
-		} else {
-			$.error( 'Simple Image Load Error: method ' +  method +
-				' does not exist.' );
+			// initialize the plugin
+			return methods.init.apply( this, arguments );
 		}
+		// general exception
+		$.error('Simple Image Load Error: the simple image load plugin ' +
+			'expects at least 1 paramater passed for inititialization or ' +
+			'method calls. The first paramater must be of type "string" or ' +
+			'"object"');
+	};
+
+	// jQuery object (get functions only)
+
+	$.simpleImageLoad = function( method ) {
+		if ( typeof method === 'string' &&
+			 method.substr(0, 3) === 'get') {
+			method = method.substr(3, 1).toLowerCase() +
+				method.substr(4);
+			if ( get[method] ) {
+				// getter functions (not chainable)
+				return get[method].call([]);
+			}else {
+				$.error('Simple Image Load Error: getter function "' +  method +
+					'" does not exist.');
+			}
+		}
+		// general exception
+		$.error('Simple Image Load Error: direct calls to simpleTimer only ' +
+			'works with get functions');
 	};
 
 })(jQuery);
