@@ -101,7 +101,7 @@ $('.loading').simpleTimer({
 
 // simple image load
 $('.container-image img').simpleImageLoad({
-	increment   :   500,
+	increment   :   200,
 	duration    :   10000,
 	onLoad  :   function() {
 		$(this).fadeIn('slow');
@@ -110,7 +110,7 @@ $('.container-image img').simpleImageLoad({
 	},
 	onError :   function() {
 		$(this).parent().html('<div class="error">ERROR: image failed to load</div>');
-	}
+	},
 });
 /*]]>*/
 </script>

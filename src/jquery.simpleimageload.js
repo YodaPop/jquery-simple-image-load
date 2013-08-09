@@ -28,10 +28,9 @@
 	 * @private
 	 **/
 	var _settings = {
-		increment   :   100,
-		duration    :   10000,
-		onLoad      :   false,
-		onError     :   false,
+		selfdestruct    :   true,
+		onLoad          :   false,
+		onError         :   false,
 	},
 
 	/**
@@ -59,9 +58,13 @@
 		// get the loader settings
 		var settings = $(this).data('SimpleImageLoad.settings');
 		// onLoad event
-		settings.onLoad.apply(this);
+		if ( settings.onLoad ) {
+			settings.onLoad.apply(this);
+		}
 		// destroy image load
-		methods.destroy.call($(this));
+		if ( settings.selfdestruct ) {
+			methods.destroy.call($(this));
+		}
 	},
 
 	/**
@@ -78,7 +81,44 @@
 		// onError event
 		settings.onError.apply(this);
 		// destroy image load
-		methods.destroy.call($(this));
+		if ( settings.selfdestruct ) {
+			methods.destroy.call($(this));
+		}
+	},
+
+	/**
+	 * Helper functions used privately by the plugin for common, simple tasks
+	 */
+	helpers = {
+
+		/**
+		 * Adds the properties of the options object to the target object if the
+		 * default1 object has the property and the default2 object does not.
+		 * Null values are ignored. If the property is added to the target, it
+		 * is also removed from options.
+		 *
+		 * @method helpers.specialExtend
+		 * @param {Object} target The target object
+		 * @param {Object} default1 The default settings used for replacement
+		 * @param {Object} default2 The default settings used for comparison
+		 * @param {Object} options The options to be added to the target object
+		 * @return {Object} The new object
+		 * @private
+		 **/
+		specialExtend : function(target, default1, default2, options) {
+			for ( prop in options ) {
+				if ( typeof default1[prop] !== 'undefined' &&
+					 typeof options[prop] !== 'null' &&
+					 typeof default2[prop] === 'undefined' ) {
+					target[prop] = options[prop];
+					// clear the options property
+					options[prop] = undefined;
+				}
+			}
+
+			return target;
+		},
+
 	},
 
 	/**
@@ -229,19 +269,19 @@
 			* Create some defaults. Extend them with any options that were
 			* provided.
 			*/
+			// simple timer settings
+			var settingsTimer = helpers.specialExtend({},
+				$.simpleTimer('getDefaultSettings'),
+				_settings,
+				options);
+			// simple image load settings
 			var settings = $.extend( true, {}, _settings, options);
 
 			return this.each(function(){
 				// save data
 				$(this).data('SimpleImageLoad.settings', settings)
 				// check periodically via the image.complete property
-				.simpleTimer({
-					increment       :   settings.increment,
-					duration        :   settings.duration,
-					autostart       :   true,
-					onIncrement     :   _check,
-					onComplete      :   _error,
-				});
+				.simpleTimer(settingsTimer);
 				// check via the onLoad event
 				this.onload = _check;
 				// check for an image error
