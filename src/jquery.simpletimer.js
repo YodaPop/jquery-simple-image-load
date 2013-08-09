@@ -103,10 +103,10 @@
 		},
 
 		/**
-		 * Get the percentage  of how close the timer is to its duration. The
-		 * percentage is calculated based on the increment and the duration.
-		 * Thus, a smaller increment relative to the duration will yield a more
-		 * accurate percentage.
+		 * Get the percentage  of how close the timer is to its duration on the
+		 * selected elements. The percentage is calculated based on the
+		 * increment and the duration. Thus, a smaller increment relative to
+		 * the duration will yield a more accurate percentage.
 		 *
 		 * @method get.percent
 		 * @return {Mixed} Returns a single floating point value between 0 and 1
