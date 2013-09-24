@@ -3,7 +3,7 @@
 * @descripton       Determines when an image element has loaded and executes a
 *                   callback function on complete.
 *
-* @version          0.1.2
+* @version          0.1.3
 * @requires         jQuery 1.6+
 *                   https://github.com/YodaPop/jquery-simple-timer
 *
@@ -45,7 +45,7 @@
 		// is the image completely loaded
 		if ( get.loaded.call($(this)) ) {
 			// call complete
-			_load.apply(this);
+			_load.call(this);
 		}
 	},
 
@@ -61,7 +61,7 @@
 		var settings = $(this).data('SimpleImageLoad.settings');
 		// onLoad event
 		if ( settings.onLoad ) {
-			settings.onLoad.apply(this);
+			settings.onLoad.call(this);
 		}
 		// destroy image load
 		if ( settings.selfdestruct ) {
@@ -272,6 +272,11 @@
 			var settingsTimer = helpers.extendOver(
 				$.simpleTimer('getDefaultSettings'),
 				settings);
+			// private timer settings
+			$.extend(settingsTimer, {
+				onIncrement :   _check,
+				onComplete  :   _load,
+			});
 
 			return this.each(function(){
 				// save data
