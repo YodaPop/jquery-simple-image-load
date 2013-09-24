@@ -3,7 +3,7 @@
 * @descripton       Determines when an image element has loaded and executes a
 *                   callback function on complete.
 *
-* @version          0.1.1
+* @version          0.1.2
 * @requires         jQuery 1.6+
 *                   https://github.com/YodaPop/jquery-simple-timer
 *
@@ -28,6 +28,8 @@
 	 * @private
 	 **/
 	var _settings = {
+		increment       :   200,
+		duration        :   10000,
 		selfdestruct    :   true,
 		onLoad          :   false,
 		onError         :   false,
@@ -92,81 +94,26 @@
 	helpers = {
 
 		/**
-		 * Adds the properties of the options object to the target object if the
-		 * default1 object has the property and the default2 object does not.
-		 * Null values are ignored. If the property is added to the target, it
-		 * is also removed from options.
+		 * Adds the properties of the options object that are also defined in
+		 * the target object to the target object. Null values are ignored.
 		 *
-		 * @method helpers.specialExtend
+		 * @method helpers.extendOver
 		 * @param {Object} target The target object
-		 * @param {Object} default1 The default settings used for replacement
-		 * @param {Object} default2 The default settings used for comparison
-		 * @param {Object} options The options to be added to the target object
+		 * @param {Object} options The options used to override the properties
+		 * of the target object
 		 * @return {Object} The new object
 		 * @private
 		 **/
-		specialExtend : function(target, default1, default2, options) {
+		extendOver : function(target, options) {
 			for ( prop in options ) {
-				if ( typeof default1[prop] !== 'undefined' &&
-					 typeof options[prop] !== 'null' &&
-					 typeof default2[prop] === 'undefined' ) {
+				if ( typeof target[prop] !== 'undefined' &&
+					 typeof options[prop] !== 'null' ) {
+					// add the property to the target
 					target[prop] = options[prop];
-					// clear the options property
-					options[prop] = undefined;
 				}
 			}
 
 			return target;
-		},
-
-	},
-
-	/**
-	 * Getter functions called using
-	 * $(selector).simpleImageLoad('get' + methodName). WARNING: These methods
-	 * are not chainable.
-	 */
-	get = {
-
-		/**
-		 * Get the private default settings object used to initialize the
-		 * public settings of the plugin.
-		 *
-		 * @method get.defaultSettings
-		 * @return {Object} The default settings object
-		 **/
-		defaultSettings : function() {
-			// apply to each element
-			return _settings;
-		},
-
-		/**
-		 * Checks the image.complete property to see if the image has been
-		 * loaded on the selected elements.
-		 *
-		 * @method get.loaded
-		 * @return {Mixed} Returns a single boolean if one element was selected,
-		 * otherwise it returns an array of booleans.
-		 **/
-		loaded : function() {
-			// the array of percentages
-			var arr = [];
-			// loop through the elements
-			$(this).each(function() {
-				if ( $(this).get(0).complete ) {
-					arr.push(true);
-				}else {
-					arr.push(false);
-				}
-			});
-
-			if ( this.length === 1 ) {
-				// return for one element
-				return arr[0];
-			}else {
-				// return for multiple selected elements
-				return arr;
-			}
 		},
 
 	},
@@ -247,6 +194,56 @@
 	},
 
 	/**
+	 * Getter functions called using
+	 * $(selector).simpleImageLoad('get' + methodName). WARNING: These methods
+	 * are not chainable.
+	 */
+	get = {
+
+		/**
+		 * Get the private default settings object used to initialize the
+		 * public settings of the plugin.
+		 *
+		 * @method get.defaultSettings
+		 * @return {Object} The default settings object
+		 **/
+		defaultSettings : function() {
+			// apply to each element
+			return _settings;
+		},
+
+		/**
+		 * Checks the image.complete property to see if the image has been
+		 * loaded on the selected elements.
+		 *
+		 * @method get.loaded
+		 * @return {Mixed} Returns a single boolean if one element was selected,
+		 * otherwise it returns an array of booleans.
+		 **/
+		loaded : function() {
+			// the array of percentages
+			var arr = [];
+			// loop through the elements
+			$(this).each(function() {
+				if ( $(this).get(0).complete ) {
+					arr.push(true);
+				}else {
+					arr.push(false);
+				}
+			});
+
+			if ( this.length === 1 ) {
+				// return for one element
+				return arr[0];
+			}else {
+				// return for multiple selected elements
+				return arr;
+			}
+		},
+
+	},
+
+	/**
 	 * Publicly accessible methods called via
 	 * $("selector").simpleImageLoad("methodName").
 	 */
@@ -269,13 +266,12 @@
 			* Create some defaults. Extend them with any options that were
 			* provided.
 			*/
-			// simple timer settings
-			var settingsTimer = helpers.specialExtend({},
-				$.simpleTimer('getDefaultSettings'),
-				_settings,
-				options);
 			// simple image load settings
 			var settings = $.extend( true, {}, _settings, options);
+			// simple timer settings
+			var settingsTimer = helpers.extendOver(
+				$.simpleTimer('getDefaultSettings'),
+				settings);
 
 			return this.each(function(){
 				// save data
@@ -335,7 +331,7 @@
 			}
 		} else if ( typeof method === 'object' || ! method ) {
 			// initialize the plugin
-			return methods.init.apply( this, arguments );
+			return filters.init.apply( this, arguments );
 		}
 		// general exception
 		$.error('Simple Image Load Error: the simple image load plugin ' +

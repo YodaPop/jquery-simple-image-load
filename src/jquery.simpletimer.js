@@ -3,7 +3,7 @@
 * @descripton       A jQuery plugin that adds a timer to an element with an
 *                   assigned interval and duration.
 *
-* @version          0.1.5
+* @version          0.1.7
 * @requires         Jquery 1.4+
 *
 * @author           Ben Gullotti
@@ -25,7 +25,7 @@
 	 * @private
 	 **/
 	var _settings = {
-		increment       :   1000,
+		increment       :   100,
 		duration        :   1000,
 		autostart       :   false,
 		// callbacks
@@ -43,12 +43,14 @@
 	 * @param {Object} The settings the plugin was initialized with
 	 * @private
 	 **/
-	_time = function ( settings ) {
+	_time = function () {
+		// retrieve settings
+		var settings = $(this).data('SimpleTimer.settings');
 		// set timeout
 		if ( settings.timeout !== false ) {
 			var el = this;
 			settings.timeout = setTimeout( function() {
-				_count.call(el, settings);
+				_count.call(el);
 			}, settings.increment);
 		}
 	},
@@ -60,7 +62,9 @@
 	 * @param {Object} The settings the plugin was initialized with
 	 * @private
 	 **/
-	_count = function ( settings ) {
+	_count = function () {
+		// retrieve settings
+		var settings = $(this).data('SimpleTimer.settings');
 		// increase count
 		settings.count += settings.increment;
 		// on increment event
@@ -69,85 +73,54 @@
 		}
 		// check complete
 		if ( settings.count >= settings.duration ) {
-			// on complete event
-			if( settings.onComplete ) {
-				settings.onComplete.call(this, settings);
-			}
-			// stop timer
-			methods.stop.call($(this));
-
-			return true;
+			_complete.call(this);
+		}else {
+			// timeout
+			_time.call(this);
 		}
-		// timeout
-		_time.call(this, settings);
 	},
 
-	/**
-	 * Getter functions called using
-	 * $(selector).simpleTimer('get' + methodName) or
-	 * $.simpleTimer('get' + methodName)
-	 * WARNING: These methods are not chainable.
-	 */
-	get = {
-
-		/**
-		 * Get the private default settings object used to initialize the
-		 * public settings of the plugin.
-		 *
-		 * @method get.defaultSettings
-		 * @return {Object} The default settings object
-		 **/
-		defaultSettings : function() {
-			// apply to each element
-			return _settings;
-		},
-
-		/**
-		 * Get the percentage  of how close the timer is to its duration on the
-		 * selected elements. The percentage is calculated based on the
-		 * increment and the duration. Thus, a smaller increment relative to
-		 * the duration will yield a more accurate percentage.
-		 *
-		 * @method get.percent
-		 * @return {Mixed} Returns a single floating point value between 0 and 1
-		 * if one element was selected, otherwise it returns an array of
-		 * floating points. If an element has not been initialized, the value
-		 * defaults to false.
-		 **/
-		percent : function() {
-			// no elements were selected
-			if ( this.length === 0 ) {
-				return false;
-			}
-			// the array of percentages
-			var arr = [];
-			// loop through the elements
-			$(this).each(function() {
-				var settings = $(this).data('SimpleTimer.settings');
-				if ( settings === undefined ) {
-					arr.push(false);
-				}else {
-					// set percent to the nearest 1000th
-					arr.push(Math.round(settings.count /
-						settings.duration * 1000) / 1000);
-				}
-			});
-
-			if ( this.length === 1 ) {
-				// return for one element
-				return arr[0];
-			}else {
-				// return for multiple selected elements
-				return arr;
-			}
-		},
-
+	_complete = function () {
+		// retrieve settings
+		var settings = $(this).data('SimpleTimer.settings');
+		// stop timer
+		filters.stop.call($(this));
+		// on complete event
+		if( settings.onComplete ) {
+			settings.onComplete.call(this, settings);
+		}
 	},
 
 	/**
 	 * Filters applied before method calls.
 	 */
 	filters = {
+
+		/**
+		 * A filter applied before all get methods except defaultSettings are
+		 * called.
+		 *
+		 * @method filters.get
+		 * @param {Object} method The get method
+		 * @return {Mixed} The get method if it exists, otherwise false.
+		 **/
+		get : function( method ) {
+			// get default settings
+			if ( method == 'defaultSettings' ) {
+				return get.defaultSettings();
+			}
+			// no elements were selected
+			if ( this.length === 0 ) {
+				return false;
+			}
+			// call get method
+			if ( get[method] ) {
+				return get[method].apply( this,
+					Array.prototype.slice.call(arguments, 1) );
+			}else {
+				return false;
+			}
+		},
 
 		/**
 		 * A filter applied before all methods are called. The filter ensures
@@ -176,10 +149,12 @@
 				// call method
 				if ( filters[method] ) {
 					// filtered method
-					filters[method].apply( filtered, arguments );
+					filters[method].apply( filtered,
+						Array.prototype.slice.call(arguments, 1) );
 				}else {
 					// unfiltered method
-					methods[method].apply( filtered, arguments );
+					methods[method].apply( filtered,
+						Array.prototype.slice.call(arguments, 1) );
 				}
 			}
 
@@ -192,13 +167,16 @@
 		 * checks to see if any of the elements' timers are already timing.
 		 *
 		 * @method filters.start
-		 * @return {Boolean} Returns true if some of the selected jQuery objects
-		 * passed the filter, false if none of the objects passed
 		 * @chainable
 		 **/
 		start : function() {
 			var filtered = this.filter(function() {
 				var settings = $(this).data('SimpleTimer.settings');
+				// checks if the duration is set to 0 or less
+				if ( settings.duration <=0 ) {
+					// jump to the end
+					_complete.call(this);
+				}
 				// checks if the timer has already been started
 				if ( settings.timeout !== false ) {
 					return false;
@@ -218,8 +196,6 @@
 
 			// call start
 			methods.start.apply(filtered, arguments);
-
-			return true;
 		},
 
 		/**
@@ -245,12 +221,175 @@
 			// check filtered before proceeding
 			if ( filtered.length === 0 ) {
 				return false;
+			}else {
+				// call stop
+				methods.stop.apply(filtered, arguments);
+				return true;
 			}
+		},
 
-			// call stop
-			methods.stop.apply(filtered, arguments);
+	},
 
-			return true;
+	/**
+	 * Getter functions called using
+	 * $(selector).simpleTimer('get' + methodName) or
+	 * $.simpleTimer('get' + methodName)
+	 * WARNING: These methods are not chainable.
+	 */
+	get = {
+
+		/**
+		 * Get the private default settings object used to initialize the
+		 * public settings of the plugin.
+		 *
+		 * @method get.defaultSettings
+		 * @return {Object} The default settings object
+		 **/
+		defaultSettings : function() {
+			// apply to each element
+			return _settings;
+		},
+
+		/**
+		 * Get a specific setting passed in as a string.
+		 *
+		 * @method get.settings
+		 * @param {String} The name of a specific setting
+		 * @return {Mixed} Returns the value of the settings or, if there is
+		 * more than one element selected, an array of values. If no settings
+		 * exist on an element, it defaults to false.
+		 **/
+		settings : function( str ) {
+			// the return array
+			var arr = [];
+			// loop through the elements
+			$(this).each(function() {
+				var settings = $(this).data('SimpleTimer.settings');
+				if ( settings === undefined ) {
+					// default to false
+					arr.push(false);
+				}else {
+					// add settings
+					arr.push(settings);
+				}
+			});
+
+			if ( this.length === 1 ) {
+				// return for one element
+				return arr[0];
+			}else {
+				// return for multiple selected elements
+				return arr;
+			}
+		},
+
+		/**
+		 * Get a specific setting passed in as a string.
+		 *
+		 * @method get.setting
+		 * @param {String} The name of a specific setting
+		 * @return {Mixed} Returns the value of the setting or, if there is more
+		 * than one element selected, an array of values. If no settings exist
+		 * on an element, it defaults to false.
+		 **/
+		setting : function( str ) {
+			// the return array
+			var arr = [];
+			// loop through the elements
+			$(this).each(function() {
+				var settings = $(this).data('SimpleTimer.settings');
+				if ( settings === undefined ||
+					 settings[str] === undefined ) {
+					// default to false
+					arr.push(false);
+				}else {
+					// add setting
+					arr.push(settings[str]);
+				}
+			});
+
+			if ( this.length === 1 ) {
+				// return for one element
+				return arr[0];
+			}else {
+				// return for multiple selected elements
+				return arr;
+			}
+		},
+
+		/**
+		 * Get the percentage  of how close the timer is to its duration on the
+		 * selected elements. The percentage is calculated based on the
+		 * increment and the duration. Thus, a smaller increment relative to
+		 * the duration will yield a more accurate percentage.
+		 *
+		 * @method get.percent
+		 * @return {Mixed} Returns a single floating point value between 0 and 1
+		 * if one element was selected, otherwise it returns an array of
+		 * floating points. If an element has not been initialized, the value
+		 * defaults to false.
+		 **/
+		percent : function() {
+			// the return array
+			var arr = [];
+			// loop through the elements
+			$(this).each(function() {
+				var settings = $(this).data('SimpleTimer.settings');
+				if ( settings === undefined ) {
+					// default to false
+					arr.push(false);
+				}else {
+					// set percent to the nearest 1000th
+					arr.push(Math.round(settings.count /
+						settings.duration * 1000) / 1000);
+				}
+			});
+
+			if ( this.length === 1 ) {
+				// return for one element
+				return arr[0];
+			}else {
+				// return for multiple selected elements
+				return arr;
+			}
+		},
+
+		/**
+		 * Get a boolean indicating whether are not the timer is currently
+		 * timing.
+		 *
+		 * @method get.timing
+		 * @return {Mixed} Returns true if the timer is currently timing, false
+		 * otherwise. A single boolean is returned if one element was selected,
+		 * otherwise it returns an array of booleans. If an element has not been
+		 * initialized, the value defaults to false.
+		 **/
+		timing : function() {
+			// the return array
+			var arr = [];
+			// loop through the elements
+			$(this).each(function() {
+				var settings = $(this).data('SimpleTimer.settings');
+				if ( settings === undefined ) {
+					// default to false
+					arr.push(false);
+				}else {
+					// check the timeout setting
+					if ( settings.timeout === false ) {
+						arr.push(false);
+					}else {
+						arr.push(true);
+					}
+				}
+			});
+
+			if ( this.length === 1 ) {
+				// return for one element
+				return arr[0];
+			}else {
+				// return for multiple selected elements
+				return arr;
+			}
 		},
 
 	},
@@ -314,7 +453,7 @@
 					settings.onStart.call(this, settings);
 				}
 				// start timing
-				_time.call(this, settings);
+				_time.call(this);
 			});
 		},
 
@@ -332,7 +471,7 @@
 				var settings = $(this).data('SimpleTimer.settings');
 				// clear timeout
 				clearTimeout(settings.timeout);
-				// stop timing boolean
+				// boolean indicates the timer is not timing
 				settings.timeout = false;
 				// on stop event
 				if ( settings.onStop ) {
@@ -354,7 +493,7 @@
 				// retrieve settings
 				var settings = $(this).data('SimpleTimer.settings');
 				// stop the timer
-				methods.stop.call($(this));
+				filters.stop.call($(this));
 				// reset the count
 				settings.count = 0;
 				// on reset event
@@ -369,8 +508,8 @@
 		 *
 		 * @method methods.update
 		 * @param {Object} options The options that will be used to override the
-		 * current options
-		 * @return {Object} The jQuery object's from which the method was called
+		 * current settings
+		 * @return {Object} The jQuery object(s) from which the method was called
 		 * @chainable
 		 **/
 		update : function( options ) {
@@ -403,7 +542,6 @@
 			});
 		},
 
-
 	};
 
 	// jQuery selected
@@ -413,13 +551,8 @@
 			if ( method.substr(0, 3) === 'get' ) {
 				method = method.substr(3, 1).toLowerCase() +
 					method.substr(4);
-				if ( get[method] ) {
-					// getter functions (not chainable)
-					return get[method].call(this);
-				}else {
-					$.error('Simple Timer Error: getter function ' +  method +
-						' does not exist.');
-				}
+				// getter functions (not chainable)
+				return filters.get.apply( this, arguments );
 			} else if ( methods[method] ) {
 				// filtered methods
 				return filters.methods.apply( this, arguments );
@@ -433,8 +566,8 @@
 		}
 		// general exception
 		$.error('Simple Timer Error: the simple timer plugin expects at' +
-			'least 1 paramater passed for inititialization. The first ' +
-			'paramater must be of type "string" or "object"');
+			'least 1 paramater. The first paramater must be of type "string" ' +
+			'or "object"');
 	};
 
 	// jQuery object (get functions only)
@@ -444,13 +577,8 @@
 			 method.substr(0, 3) === 'get') {
 			method = method.substr(3, 1).toLowerCase() +
 				method.substr(4);
-			if ( get[method] ) {
-				// getter functions (not chainable)
-				return get[method].call([]);
-			}else {
-				$.error('Simple Timer Error: getter function "' +  method +
-					'" does not exist.');
-			}
+			// getter functions (not chainable)
+			return filters.get.apply( [], arguments );
 		}
 		// general exception
 		$.error('Simple Timer Error: direct calls to simpleTimer only works ' +
