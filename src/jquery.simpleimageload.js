@@ -277,7 +277,7 @@
 				// save data
 				$(this).data('SimpleImageLoad.settings', settings)
 				// check periodically via the image.complete property
-				.simpleTimer(settingsTimer);
+				.simpleTimer(settingsTimer).simpleTimer('start');
 				// check via the onLoad event
 				this.onload = _check;
 				// check for an image error
